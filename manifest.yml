@@ -1,82 +1,99 @@
 apiVersion: influxdata.com/v2alpha1
-kind: Template
+kind: Dashboard
 metadata:
-  name: ucep-system-monitoring
-  description: >
-    Dashboard template to monitor CPU, Memory, Disk, and Network usage from Telegraf inputs in the `ucep` bucket.
+  name: system-metrics
+spec:
+  name: System Metrics
+  charts:
+    - kind: Single_Stat
+      name: CPU Usage %
+      queries:
+        - query: |
+            from(bucket: "ucep")
+              |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+              |> filter(fn: (r) => r._measurement == "cpu" and r._field == "usage_user")
+              |> mean()
+              |> yield(name: "mean")
+      suffix: "%"
+      decimalPlaces: 2
+      width: 2
+      height: 3
 
-resources:
-  - kind: Dashboard
-    metadata:
-      name: ucep-server-metrics
-    spec:
-      name: UCEP Server Metrics
-      description: Telegraf system metrics for CPU, memory, disk, and network usage.
-      charts:
-        - name: CPU Usage
-          kind: Xy
-          properties:
-            queries:
-              - query: >
-                  from(bucket: "ucep")
-                    |> range(start: -1h)
-                    |> filter(fn: (r) => r._measurement == "cpu" and r.cpu == "cpu-total" and r._field == "usage_user")
-                    |> aggregateWindow(every: 1m, fn: mean)
-                    |> yield(name: "mean")
-            xCol: _time
-            yCol: _value
-            colors:
-              - hex: "#31C0F6"
-            note: CPU usage in percentage
-            showNoteWhenEmpty: true
+    - kind: Xy
+      name: CPU Usage Over Time
+      queries:
+        - query: |
+            from(bucket: "ucep")
+              |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+              |> filter(fn: (r) => r._measurement == "cpu" and r._field == "usage_user")
+              |> aggregateWindow(every: v.windowPeriod, fn: mean)
+              |> yield(name: "mean")
+      xCol: _time
+      yCol: _value
+      width: 6
+      height: 3
+      position: overlaid
+      geom: line
 
-        - name: Memory Used Percent
-          kind: Xy
-          properties:
-            queries:
-              - query: >
-                  from(bucket: "ucep")
-                    |> range(start: -1h)
-                    |> filter(fn: (r) => r._measurement == "mem" and r._field == "used_percent")
-                    |> aggregateWindow(every: 1m, fn: mean)
-                    |> yield(name: "mean")
-            xCol: _time
-            yCol: _value
-            colors:
-              - hex: "#A352CC"
-            note: Memory used percent
-            showNoteWhenEmpty: true
+    - kind: Single_Stat
+      name: Memory Used %
+      queries:
+        - query: |
+            from(bucket: "ucep")
+              |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+              |> filter(fn: (r) => r._measurement == "mem" and r._field == "used_percent")
+              |> last()
+      suffix: "%"
+      decimalPlaces: 1
+      width: 2
+      height: 3
 
-        - name: Disk Used Percent
-          kind: Xy
-          properties:
-            queries:
-              - query: >
-                  from(bucket: "ucep")
-                    |> range(start: -1h)
-                    |> filter(fn: (r) => r._measurement == "disk" and r._field == "used_percent")
-                    |> aggregateWindow(every: 1m, fn: mean)
-                    |> yield(name: "mean")
-            xCol: _time
-            yCol: _value
-            colors:
-              - hex: "#F48D38"
-            note: Disk space used in percentage
-            showNoteWhenEmpty: true
+    - kind: Xy
+      name: Memory Usage Over Time
+      queries:
+        - query: |
+            from(bucket: "ucep")
+              |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+              |> filter(fn: (r) => r._measurement == "mem" and r._field == "used_percent")
+              |> aggregateWindow(every: v.windowPeriod, fn: mean)
+              |> yield(name: "mean")
+      xCol: _time
+      yCol: _value
+      width: 6
+      height: 3
+      position: overlaid
+      geom: line
 
-        - name: Network Traffic (Bytes Sent/Recv)
-          kind: Xy
-          properties:
-            queries:
-              - query: >
-                  from(bucket: "ucep")
-                    |> range(start: -1h)
-                    |> filter(fn: (r) => r._measurement == "net" and (r._field == "bytes_sent" or r._field == "bytes_recv"))
-                    |> aggregateWindow(every: 1m, fn: mean)
-                    |> yield(name: "mean")
-            xCol: _time
-            yCol: _value
-            colors:
-              - hex: "#FFB6C1"
-            note: Network I/O in bytes
-            showNoteWhenEmpty: true
+    - kind: Xy
+      name: Disk Used %
+      queries:
+        - query: |
+            from(bucket: "ucep")
+              |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+              |> filter(fn: (r) => r._measurement == "disk" and r._field == "used_percent")
+              |> aggregateWindow(every: v.windowPeriod, fn: mean)
+              |> yield(name: "mean")
+      xCol: _time
+      yCol: _value
+      width: 6
+      height: 3
+      geom: line
+
+    - kind: Xy
+      name: Network Usage (Bytes Sent/Recv)
+      queries:
+        - query: |
+            from(bucket: "ucep")
+              |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+              |> filter(fn: (r) =>
+                r._measurement == "net" and
+                (r._field == "bytes_sent" or r._field == "bytes_recv")
+              )
+              |> aggregateWindow(every: v.windowPeriod, fn: mean)
+              |> yield(name: "mean")
+      xCol: _time
+      yCol: _value
+      width: 6
+      height: 3
+      geom: line
+      position: overlaid
