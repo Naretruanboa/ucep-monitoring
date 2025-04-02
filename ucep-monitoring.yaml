@@ -1,0 +1,82 @@
+apiVersion: influxdata.com/v2alpha1
+kind: Template
+metadata:
+  name: ucep-system-monitoring
+  description: >
+    Dashboard template to monitor CPU, Memory, Disk, and Network usage from Telegraf inputs in the `ucep` bucket.
+
+resources:
+  - kind: Dashboard
+    metadata:
+      name: ucep-server-metrics
+    spec:
+      name: UCEP Server Metrics
+      description: Telegraf system metrics for CPU, memory, disk, and network usage.
+      charts:
+        - name: CPU Usage
+          kind: Xy
+          properties:
+            queries:
+              - query: >
+                  from(bucket: "ucep")
+                    |> range(start: -1h)
+                    |> filter(fn: (r) => r._measurement == "cpu" and r.cpu == "cpu-total" and r._field == "usage_user")
+                    |> aggregateWindow(every: 1m, fn: mean)
+                    |> yield(name: "mean")
+            xCol: _time
+            yCol: _value
+            colors:
+              - hex: "#31C0F6"
+            note: CPU usage in percentage
+            showNoteWhenEmpty: true
+
+        - name: Memory Used Percent
+          kind: Xy
+          properties:
+            queries:
+              - query: >
+                  from(bucket: "ucep")
+                    |> range(start: -1h)
+                    |> filter(fn: (r) => r._measurement == "mem" and r._field == "used_percent")
+                    |> aggregateWindow(every: 1m, fn: mean)
+                    |> yield(name: "mean")
+            xCol: _time
+            yCol: _value
+            colors:
+              - hex: "#A352CC"
+            note: Memory used percent
+            showNoteWhenEmpty: true
+
+        - name: Disk Used Percent
+          kind: Xy
+          properties:
+            queries:
+              - query: >
+                  from(bucket: "ucep")
+                    |> range(start: -1h)
+                    |> filter(fn: (r) => r._measurement == "disk" and r._field == "used_percent")
+                    |> aggregateWindow(every: 1m, fn: mean)
+                    |> yield(name: "mean")
+            xCol: _time
+            yCol: _value
+            colors:
+              - hex: "#F48D38"
+            note: Disk space used in percentage
+            showNoteWhenEmpty: true
+
+        - name: Network Traffic (Bytes Sent/Recv)
+          kind: Xy
+          properties:
+            queries:
+              - query: >
+                  from(bucket: "ucep")
+                    |> range(start: -1h)
+                    |> filter(fn: (r) => r._measurement == "net" and (r._field == "bytes_sent" or r._field == "bytes_recv"))
+                    |> aggregateWindow(every: 1m, fn: mean)
+                    |> yield(name: "mean")
+            xCol: _time
+            yCol: _value
+            colors:
+              - hex: "#FFB6C1"
+            note: Network I/O in bytes
+            showNoteWhenEmpty: true
